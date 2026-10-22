@@ -56,7 +56,7 @@ jobs:
           mkdir -p build
           cd build
           repo init -u "$MANIFEST" -b "$BRANCH" --depth=1
-          repo sync -c -j"$(nproc)" --no-clone-bundle --no-tags --depth=1 --force-sync
+          repo sync -c -j"$(nproc)" --no-clone-bundle --no-tags --force-sync
 
       # This repo IS the device tree -- check it out directly into the
       # path the build system expects:
