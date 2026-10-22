@@ -79,3 +79,15 @@ TW_USE_MODEL_HARDWARE_ID_FOR_DEVICE_ID := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
 
 
+# Display init kick -- REQUIRED on MT6735/MT6580 (LK leaves DSI un-refreshed;
+# without this the GUI blocks in its first flip and the screen stays on the logo)
+TW_SCREEN_BLANK_ON_BOOT := true
+
+# USB mass-storage LUN path for MTK musb (standard for this platform;
+# fixes USB-Storage mode in TWRP, harmless otherwise)
+TARGET_USE_CUSTOM_LUN_FILE_PATH := /sys/devices/platform/mt_usb/musb-hdrc.0.auto/gadget/lun%d/file
+
+# MTK platform identity (used by TWRP battery/vibrate/USB code paths)
+TARGET_BOARD_PLATFORM := mt6735
+BOARD_USES_MTK_HARDWARE := true
+BOARD_HAS_MTK_HARDWARE := true
