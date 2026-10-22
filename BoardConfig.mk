@@ -50,7 +50,7 @@ TARGET_USERIMAGES_USE_EXT4 := true
 #  Recovery
 # =====================================================================
 TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/recovery.fstab
-TARGET_RECOVERY_PIXEL_FORMAT := "BGBX_8888"
+# TARGET_RECOVERY_PIXEL_FORMAT := "BGBX_8888"
 BOARD_HAS_NO_SELECT_BUTTON := true
 BOARD_HAS_LARGE_FILESYSTEM := true
 BOARD_SUPPRESS_SECURE_ERASE := true
