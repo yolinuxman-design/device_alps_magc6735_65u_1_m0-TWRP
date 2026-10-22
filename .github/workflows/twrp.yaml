@@ -1,22 +1,27 @@
 name: Build TWRP for magc6735_65u_1_m0
+
 on:
   workflow_dispatch:
   push:
     branches: [ main, master ]
+
 env:
   DEVICE: magc6735_65u_1_m0
   MANIFEST: https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni.git
   BRANCH: twrp-6.0
   JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
+
 jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
       - name: Free up disk space
         run: |
+          df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift
+          df -h /
+
       - name: Install OpenJDK 8 (omni-6.0 requires Java 8)
         run: |
           sudo apt-get update
@@ -25,12 +30,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openjdk-8-jdk
           sudo update-java-alternatives -s java-1.8.0-openjdk-amd64
+          java -version
+
       - name: Install build dependencies
         run: |
-          sudo apt-get install -y git-core gnupg flex bison gperf build-essential zip curl \
-            zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 libncurses5 lib32ncurses5-dev \
-            x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc \
-            unzip python3 python-is-python3 bc ccache lzop rsync imagemagick squashfs-tools
+          sudo apt-get install -y \
+            git-core gnupg flex bison gperf build-essential zip curl \
+            zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 \
+            libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev \
+            lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip \
+            python3 python-is-python3 bc ccache lzop rsync imagemagick \
+            squashfs-tools
+
       - name: Install repo tool
         run: |
           mkdir -p "$HOME/.bin"
@@ -39,30 +50,53 @@ jobs:
           echo "$HOME/.bin" >> "$GITHUB_PATH"
           git config --global user.email "ci@localhost"
           git config --global user.name "twrp-ci"
-      - name: Verify kernel is committed
-        run: |
-          test -f device/alps/magc6735_65u_1_m0/prebuilt/kernel || \
-            { echo "::error::Commit your stock kernel first!"; exit 1; }
+
       - name: repo init & sync (shallow)
         run: |
           mkdir -p build
           cd build
           repo init -u "$MANIFEST" -b "$BRANCH" --depth=1
           repo sync -c -j"$(nproc)" --no-clone-bundle --no-tags --depth=1 --force-sync
-      - name: Copy device tree into build
-        run: cp -r "$GITHUB_WORKSPACE/device" build/device
+
+      # This repo IS the device tree -- check it out directly into the
+      # path the build system expects:
+      #   <source>/device/alps/magc6735_65u_1_m0/
+      - name: Checkout device tree into build tree
+        uses: actions/checkout@v4
+        with:
+          path: build/device/alps/magc6735_65u_1_m0
+
+      - name: Verify committed kernel (accepts gzip OR raw ARM64 Image)
+        run: |
+          K=build/device/alps/magc6735_65u_1_m0/prebuilt/kernel
+          test -f "$K" || { echo "::error::prebuilt/kernel missing in repo"; exit 1; }
+          file "$K"
+          GZIP=$(head -c2 "$K" | od -An -tx1 | tr -d ' \n')
+          ARM64=$(od -An -tx1 -j56 -N4 "$K" | tr -d ' \n')
+          echo "gzip magic: $GZIP | ARM64 magic: $ARM64"
+          if [ "$GZIP" != "1f8b" ] && [ "$ARM64" != "41524d64" ]; then
+            echo "::error::kernel is neither gzip Image nor ARM64 boot Image -- you probably committed the whole boot.img. Run: unpackbootimg -i boot.img, then commit the 'boot.img-kernel' file renamed to 'kernel'"
+            exit 1
+          fi
+          if [ "$(stat -c%s "$K")" -eq 16777216 ]; then
+            echo "::error::kernel is exactly 16MB -- that is the whole boot.img, not the kernel"
+            exit 1
+          fi
+
       - name: Build recoveryimage
         run: |
           cd build
           source build/envsetup.sh
           lunch "omni_${DEVICE}-eng"
           make recoveryimage -j"$(nproc)"
+
       - name: Upload TWRP image
         uses: actions/upload-artifact@v4
         with:
           name: twrp-${{ env.DEVICE }}
           path: build/out/target/product/${{ env.DEVICE }}/recovery.img
           if-no-files-found: error
+
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
