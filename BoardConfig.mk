@@ -23,7 +23,7 @@ TARGET_USES_64_BIT_BINDER := true
 #  prebuilt/  -- do NOT use anyone else's kernel.
 # =====================================================================
 TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/prebuilt/kernel
-BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
+BOARD_KERNEL_IMAGE_NAME := Image
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_PAGESIZE := 2048
 BOARD_RAMDISK_OFFSET := 0x03f88000
