@@ -32,6 +32,33 @@ jobs:
           sudo update-java-alternatives -s java-1.8.0-openjdk-amd64
           java -version
 
+      - name: Install Python 2.7 (AOSP 6.0 build scripts are Python 2 only)
+        run: |
+          set -x
+          sudo apt-get install -y libssl-dev zlib1g-dev libsqlite3-dev libbz2-dev libreadline-dev libncurses5-dev libgdbm-dev libffi-dev
+          # Try deadsnakes PPA first
+          sudo add-apt-repository ppa:deadsnakes/ppa -y || true
+          sudo apt-get update || true
+          if sudo apt-get install -y python2.7 2>/dev/null && /usr/bin/python2.7 --version 2>&1 | grep -q "2\.7"; then
+            echo "python2.7 installed from deadsnakes"
+            PY=/usr/bin/python2.7
+          else
+            echo "deadsnakes unavailable -- building Python 2.7.18 from source"
+            cd /tmp
+            curl -sLO https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+            tar xf Python-2.7.18.tgz
+            cd Python-2.7.18
+            ./configure --prefix=/opt/python27 --enable-shared
+            make -j"$(nproc)"
+            sudo make install
+            sudo ln -sf /opt/python27/lib/libpython2.7.so.1.0 /usr/lib/x86_64-linux-gnu/
+            sudo ldconfig
+            PY=/opt/python27/bin/python2.7
+          fi
+          sudo ln -sf "$PY" /usr/local/bin/python
+          python --version
+          python --version 2>&1 | grep -q "Python 2\.7" || { echo "::error::python is not 2.7"; exit 1; }
+
       - name: Install build dependencies
         run: |
           sudo apt-get install -y \
@@ -39,8 +66,7 @@ jobs:
             zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 \
             libncurses5 lib32ncurses5-dev x11proto-core-dev libx11-dev \
             lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip \
-            python3 python-is-python3 bc ccache lzop rsync imagemagick \
-            squashfs-tools
+            bc ccache lzop rsync imagemagick squashfs-tools
 
       - name: Install repo tool
         run: |
@@ -58,9 +84,6 @@ jobs:
           repo init -u "$MANIFEST" -b "$BRANCH" --depth=1
           repo sync -c -j"$(nproc)" --no-clone-bundle --no-tags --force-sync
 
-      # This repo IS the device tree -- check it out directly into the
-      # path the build system expects:
-      #   <source>/device/alps/magc6735_65u_1_m0/
       - name: Checkout device tree into build tree
         uses: actions/checkout@v4
         with:
