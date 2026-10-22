@@ -30,7 +30,7 @@ BOARD_RAMDISK_OFFSET := 0x03f88000
 BOARD_TAGS_OFFSET := 0x0df88000
 BOARD_MKBOOTIMG_ARGS := --ramdisk_offset $(BOARD_RAMDISK_OFFSET) --tags_offset $(BOARD_TAGS_OFFSET)
 BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64S1 androidboot.selinux=permissive
-LZMA_RAMDISK_TARGETS := recovery
+LZMA_RAMDISK_TARGETS := boot recovery
 
 # =====================================================================
 #  Partition sizes -- VERIFY against YOUR dump!
@@ -77,3 +77,5 @@ TW_DEFAULT_BRIGHTNESS := 128
 TW_CUSTOM_CPU_TEMP_PATH := /sys/devices/virtual/thermal/thermal_zone1/temp
 TW_USE_MODEL_HARDWARE_ID_FOR_DEVICE_ID := true
 TW_INPUT_BLACKLIST := "hbtp_vm"
+
+
